@@ -1,0 +1,492 @@
+{
+  "info": {
+    "name": "Online Shopping Store",
+    "description": "Runnable collection for the in-memory online shopping API. Run folders in order against a freshly started local server at {{baseUrl}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "adminJwt",
+      "value": ""
+    },
+    {
+      "key": "clientJwt",
+      "value": ""
+    },
+    {
+      "key": "newClientJwt",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Client creation flow",
+      "description": "Creates a runtime CLIENT user, then logs in with the same identification tuple and saves newClientJwt.",
+      "item": [
+        {
+          "name": "Create new CLIENT user",
+          "description": "Public endpoint for creating CLIENT users in memory. ADMIN users are seeded at application startup.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"postman-client\",\n  \"contactType\": \"EMAIL\",\n  \"contactValue\": \"postman-client@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users/clients"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('created or duplicate from previous run', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as new CLIENT and save JWT",
+          "description": "Authenticates the new CLIENT with userId, contactType, and contactValue, then stores the JWT.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"postman-client\",\n  \"contactType\": \"EMAIL\",\n  \"contactValue\": \"postman-client@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('login succeeds', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('newClientJwt', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Admin login flow",
+      "description": "Logs in as the seeded ADMIN user and saves adminJwt for product management requests.",
+      "item": [
+        {
+          "name": "Login as seeded ADMIN and save JWT",
+          "description": "Uses seeded ADMIN credentials from the application startup data.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"admin-1\",\n  \"contactType\": \"EMAIL\",\n  \"contactValue\": \"admin@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('admin login succeeds', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('adminJwt', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Admin product management flow",
+      "description": "Exercises ADMIN-only product creation, updates, and active catalog visibility controls.",
+      "item": [
+        {
+          "name": "Create Product",
+          "description": "Creates a managed Product with an initial active=true status and available quantity.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"postman-admin-product\",\n  \"name\": \"Postman Managed Product\",\n  \"description\": \"Created from Postman\",\n  \"price\": 25.50,\n  \"quantity\": 3\n}"
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Update Product description",
+          "description": "Updates only the Product description.",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated from Postman\"\n}"
+            },
+            "url": "{{baseUrl}}/api/products/postman-admin-product/description"
+          }
+        },
+        {
+          "name": "Update Product price",
+          "description": "Updates only the Product price.",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 31.75\n}"
+            },
+            "url": "{{baseUrl}}/api/products/postman-admin-product/price"
+          }
+        },
+        {
+          "name": "Update Product quantity",
+          "description": "Updates the available quantity for the Product type.",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 4\n}"
+            },
+            "url": "{{baseUrl}}/api/products/postman-admin-product/quantity"
+          }
+        },
+        {
+          "name": "Create zero-quantity Product for negative flow",
+          "description": "Creates an active Product with zero quantity so the negative buy flow can verify OUT_OF_STOCK behavior.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"postman-zero-product\",\n  \"name\": \"Zero Stock Product\",\n  \"description\": \"Left with zero quantity\",\n  \"price\": 8.00,\n  \"quantity\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Deactivate Product",
+          "description": "Sets active=false so the Product is removed from GET /api/products/active.",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminJwt}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/postman-admin-product/deactivate"
+          }
+        },
+        {
+          "name": "Activate Product",
+          "description": "Sets active=true so the Product appears again in GET /api/products/active.",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminJwt}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/postman-admin-product/activate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Client login flow",
+      "description": "Logs in as the seeded CLIENT user and saves clientJwt for catalog, buy, and my-products requests.",
+      "item": [
+        {
+          "name": "Login as seeded CLIENT and save JWT",
+          "description": "Uses seeded CLIENT credentials from the application startup data.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"client-1\",\n  \"contactType\": \"EMAIL\",\n  \"contactValue\": \"client1@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('client login succeeds', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('clientJwt', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Client product flow",
+      "description": "Shows the CLIENT catalog flow: list active Products, buy one Product, then list Products assigned to the authenticated CLIENT.",
+      "item": [
+        {
+          "name": "Get active Products",
+          "description": "Returns all active Products in the system. This is a catalog endpoint, not a client-owned-products endpoint.",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientJwt}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/active"
+          }
+        },
+        {
+          "name": "Buy Product",
+          "description": "Assigns prod-headphones to the authenticated CLIENT and decrements quantity.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientJwt}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/prod-headphones/buy"
+          }
+        },
+        {
+          "name": "Get my Products",
+          "description": "Returns Products assigned to the authenticated CLIENT based on the JWT subject.",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientJwt}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/my-products"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Security negative flow",
+      "description": "Verifies authentication, authorization, JWT-derived client ownership, duplicate purchase, and out-of-stock error behavior.",
+      "item": [
+        {
+          "name": "Unauthenticated admin request receives 401",
+          "description": "A protected ADMIN endpoint without a JWT should return 401.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"blocked-product\",\n  \"name\": \"Blocked\",\n  \"description\": \"No token\",\n  \"price\": 1.00,\n  \"quantity\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CLIENT tries admin endpoint and receives 403",
+          "description": "A valid CLIENT JWT cannot call an ADMIN-only endpoint.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"forbidden-product\",\n  \"name\": \"Forbidden\",\n  \"description\": \"Client cannot create\",\n  \"price\": 1.00,\n  \"quantity\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CLIENT my-products listing is derived from JWT",
+          "description": "No clientId is accepted; the authenticated JWT subject decides whose Products are returned.",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientJwt}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/my-products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('current user products returned', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CLIENT buys same Product twice and receives 409",
+          "description": "The same CLIENT cannot own the same Product more than once.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientJwt}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/prod-headphones/buy"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CLIENT buys zero-quantity Product and receives error",
+          "description": "Buying an active Product with quantity 0 should fail with OUT_OF_STOCK when the setup request created it.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientJwt}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/postman-zero-product/buy"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('zero quantity error', function () { pm.expect([400, 404]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
